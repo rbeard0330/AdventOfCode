@@ -44,7 +44,6 @@ def main():
 
     file_name = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "p1.txt")
-    print(file_name)
 
     with open(file_name, "r") as f:
         for line in f.readlines():
