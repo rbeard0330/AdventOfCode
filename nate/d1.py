@@ -15,4 +15,5 @@ def fuel_extended(module):
 assert fuel(100756) == 33583 # given
 assert (t2 := fuel_extended(100756)) == 50346, str(t2) # also given
 
-print(sum(map(fuel_extended, modules)))
+print(sum(map(fuel, module))) #This gives part 1's answer.
+print(sum(map(fuel_extended, modules))) #This gives part 2's answer.
