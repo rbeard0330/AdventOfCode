@@ -1,3 +1,6 @@
+from util.decorators import timer
+
+
 def add(tape, ad1, ad2, ad3):
     tape[ad3] = tape[ad1] + tape[ad2]
 
@@ -36,6 +39,7 @@ def initialize_tape():
     1,155,5,0,99,2,0,14,0""".replace('\n', '').split(',')]
 
 
+@timer
 def seek_target(n):
     for i in range(100):
         for j in range(100):
