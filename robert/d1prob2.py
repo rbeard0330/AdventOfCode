@@ -32,6 +32,7 @@ end.)
 import math
 import os
 
+
 def calc_fuel(mass):
     answer = math.floor(mass / 3) - 2
     if answer < 0:
@@ -39,16 +40,18 @@ def calc_fuel(mass):
     else:
         return answer + calc_fuel(answer)
 
+
 def main():
     accumulator = 0
 
     file_name = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "p1.txt")
+        os.path.dirname(os.path.abspath(__file__)), "inputs", "p1.txt")
 
     with open(file_name, "r") as f:
         for line in f.readlines():
             accumulator += calc_fuel(int(line))
 
     return accumulator
+
 
 print(main())

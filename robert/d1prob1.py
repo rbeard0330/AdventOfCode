@@ -19,7 +19,8 @@ find the fuel required for a module, take its mass, divide by three, round down
 
 For example:
 
-For a mass of 12, divide by 3 and round down to get 4, then subtract 2 to get 2.
+For a mass of 12, divide by 3 and round down to get 4, then subtract 2 to get
+2.
 For a mass of 14, dividing by 3 and rounding down still yields 4, so the fuel
 required is also 2.
 For a mass of 1969, the fuel required is 654.
@@ -32,14 +33,16 @@ input), then add together all the fuel values.
 import math
 import os
 
+
 def calc_fuel(mass):
     return math.floor(mass / 3) - 2
+
 
 def main():
     accumulator = 0
 
     file_name = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "p1.txt")
+        os.path.dirname(os.path.abspath(__file__)), "inputs", "p1.txt")
 
     with open(file_name, "r") as f:
         for line in f.readlines():
