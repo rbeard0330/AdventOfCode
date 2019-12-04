@@ -15,8 +15,8 @@ def hasAdjacency(n):
 
 def hasSpecialAdjacency(n):
     padded = '#' + str(n) + '#'
-    for ix in range(n):
-        temp = padded[ix:ix+3]
+    for ix in range(len(str(n))-1):
+        temp = padded[ix:ix+4]
         if (temp[1] == temp[2] and temp[1] != temp[0] and temp[1] != temp[3]):
             return True
     return False
