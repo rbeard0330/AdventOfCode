@@ -42,7 +42,7 @@ class Point:
 class Segment:
     p1: Point
     p2: Point
-    dir: str
+    direction: str
 
     @property
     def x_min(self):
@@ -89,10 +89,10 @@ class Wire:
         for turn in line.split(","):
             p1 = p2
             d_vect = Point(*dir_to_vect(turn[0]))
-            dir = "H" if d_vect.x != 0 else "V"
+            direction = "H" if d_vect.x != 0 else "V"
             self.current_pos += d_vect * int(turn[1:])
             p2 = copy(self.current_pos)
-            self.segment_list.append(Segment(p1, p2, dir))
+            self.segment_list.append(Segment(p1, p2, direction))
 
     def __str__(self):
         s_list = [str(turn) for turn in self.segment_list]
@@ -142,8 +142,8 @@ def manhattan_distance(p1, p2=None):
 def intersect(s1, s2):
     "Return point where p1-p2 and p3-p4 intersect, or False if none."
 
-    if s1.dir == s2.dir:
-        if s1.dir == "V":
+    if s1.direction == s2.direction:
+        if s1.direction == "V":
             if s1.p1.x != s2.p1.x:
                 return False
             elif s1.y_max == s2.y_min:
@@ -154,7 +154,7 @@ def intersect(s1, s2):
                     or s1.y_min <= s2.y_max <= s1.y_max):
                 raise NotImplementedError("""Not implemented for overlapping
                                             segments""")
-        elif s1.dir == "H":
+        elif s1.direction == "H":
             if s1.p1.y != s2.p1.y:
                 return False
             elif s1.x_max == s2.x_min:
@@ -166,7 +166,7 @@ def intersect(s1, s2):
                 raise NotImplementedError("""Not implemented for overlapping
                                             segments""")
     
-    if s1.dir == "H":
+    if s1.direction == "H":
         h_seg, v_seg = (s1, s2)
     else:
         h_seg, v_seg = (s2, s1)
