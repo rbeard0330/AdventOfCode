@@ -17,6 +17,7 @@ class AdvancedIntcoder():
         self.tape = tape
         self.master = copy(tape)
         self.instructs = {
+
             1:  (self.add_and_store,
                  self.build_parser(3, store=True),
                  self.build_positioner(3)),
@@ -69,11 +70,11 @@ class AdvancedIntcoder():
             for i in range(n):
                 mode = mode_list[i]
                 if mode:
-                    data_list.append(self.tape[self.pos + i + 1])
+                    data_list.append(self[self.pos + i + 1])
                 else:
-                    data_list.append(self.tape[self.tape[self.pos + i + 1]])
+                    data_list.append(self[self[self.pos + i + 1]])
             if store:
-                data_list.append(self.tape[self.pos + param_count])
+                data_list.append(self[self.pos + param_count])
             return data_list
 
         return parse
@@ -99,13 +100,13 @@ class AdvancedIntcoder():
             pos_f(self)
 
     def add_and_store(self, addend1, addend2, store_addr):
-        self.tape[store_addr] = addend1 + addend2
+        self[store_addr] = addend1 + addend2
 
     def mult_and_store(self, mult1, mult2, store_addr):
-        self.tape[store_addr] = mult1 * mult2
+        self[store_addr] = mult1 * mult2
 
     def store_input(self, addr):
-        self.tape[addr] = self.input_queue.pop(0)
+        self[addr] = self.input_queue.pop(0)
 
     def output(self, addr):
         print(f"OUTPUT ADDRESS {addr}: {self.tape[addr]}")
@@ -124,18 +125,15 @@ class AdvancedIntcoder():
 
     def less_than(self, arg1, arg2, arg3):
         if arg1 < arg2:
-            self.tape[arg3] = 1
+            self[arg3] = 1
         else:
-            self.tape[arg3] = 0
+            self[arg3] = 0
 
     def equals(self, arg1, arg2, arg3):
         if arg1 == arg2:
-            self.tape[arg3] = 1
+            self[arg3] = 1
         else:
-            self.tape[arg3] = 0
-
-    def null_func(self, *args, **kwargs):
-        pass
+            self[arg3] = 0
 
     @property
     def data(self):
