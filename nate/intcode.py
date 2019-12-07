@@ -42,15 +42,15 @@ def equalTo(l, ix, modes):
     l[toWrite] = 1 if values[0] == values[1] else 0
     return (ix + 4), False
 
-def takeInput(l, ix, modes, inputValue):
+def takeInput(l, ix, modes, inputStream):
     _, toWrite = getParams(l, ix, modes, 1)
-    l[toWrite] = inputValue
+    l[toWrite] = inputStream.pop(0)
     return ix + 2, False
 
-def makeOutput(l, ix, modes): # for now, just print the output
+def makeOutput(l, ix, modes, outputStream):
     _, toOutput = getParams(l, ix, modes, 1)
     outputValue = l[toOutput]
-    print("OUTPUT: " + str(outputValue))
+    outputStream.append(outputValue)
     return ix + 2, False
 
 def stop(l, ix, modes):
@@ -77,20 +77,25 @@ class IntcodeProgram:
            99 : stop,
            }
 
-    def __init__(self, seq, inputCode = 1, ix=0):
+    def __init__(self, seq, inputStream = [], ix=0):
         self.seq = seq.copy()
         self.init_seq = tuple(seq) # freeze the initial sequence
-        self.inputCode = inputCode
+        self.inputStream = inputStream
+        self.outputStream = []
         self.ix = ix
     
     def processCurrentOp(self):
         '''Returns whether to stop'''
         opcode, modes = parseOp(self.seq[self.ix])
         assert opcode in self.ops
-        if opcode != 3:
+        if opcode not in (3, 4):
             self.ix, stop = self.ops[opcode](self.seq, self.ix, modes) # this mutates the list
+        elif opcode == 3:
+            self.ix, stop = self.ops[opcode](self.seq, self.ix, modes, self.inputStream) # this mutates the list
         else:
-            self.ix, stop = self.ops[opcode](self.seq, self.ix, modes, self.inputCode) # this mutates the list
+            assert opcode == 4
+            self.ix, stop = self.ops[opcode](self.seq, self.ix, modes, self.outputStream) # this mutates the list
+
         return stop
     
     def runUntilStop(self, returnIndex=0):
