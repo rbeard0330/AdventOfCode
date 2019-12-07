@@ -1,8 +1,6 @@
 with open('nate/inputs/in5.txt') as f:
     code = [int(i) for i in f.readline().strip().split(',')]
 
-currInput = 5
-
 from intcode import IntcodeProgram
 
 def test1():
@@ -25,8 +23,5 @@ def test3():
     prog.runUntilStop() # should output 0
 
 if __name__=='__main__':
-    test1()
-    test2()
-    test3()
-    prog = IntcodeProgram(code)
+    prog = IntcodeProgram(code, 5)
     prog.runUntilStop()

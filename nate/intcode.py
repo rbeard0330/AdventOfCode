@@ -9,7 +9,7 @@ def getParams(l, ix, modes, numParams):
         try:
             result.append(l[ix+i+1] if modes[i] == 1 else l[l[ix+i+1]])
         except:
-            result.append(l[ix+i+1])
+            result.append(l[l[ix+i+1]])
     return result, l[ix+numParams] # for cases where you need to jump / write
 
 def add(l, ix, modes):
