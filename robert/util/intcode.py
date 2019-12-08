@@ -1,8 +1,6 @@
 from copy import copy
 import math
 
-import decorators
-
 
 class GenericIntcoder:
     def __init__(self, tape, instructs, halts):
@@ -58,45 +56,172 @@ def mult(*args):
     return math.prod(args)
 
 
-@decorators.timer
-def main(n):
-    tape = [int(n) for n in """1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,1,10,19,1,6,
-    19,23,1,10,23,27,2,27,13,31,1,31,6,35,2,6,35,39,1,39,5,43,1,6,43,47,2,6,47,
-    51,1,51,5,55,2,55,9,59,1,6,59,63,1,9,63,67,1,67,10,71,2,9,71,75,1,6,75,79,
-    1,5,79,83,2,83,10,87,1,87,5,91,1,91,9,95,1,6,95,99,2,99,10,103,1,103,5,107,
-    2,107,6,111,1,111,5,115,1,9,115,119,2,119,10,123,1,6,123,127,2,13,127,131,
-    1,131,6,135,1,135,10,139,1,13,139,143,1,143,13,147,1,5,147,151,1,151,2,155,
-    1,155,5,0,99,2,0,14,0""".replace('\n', '').split(',')]
-    instruction_set = {
-        1:  (sum, 3),
-        2:  (math.prod, 3)
-    }
-    halts = [99]
-    intcomp = GenericIntcoder(tape, instruction_set, halts)
+class AdvancedIntcoder():
 
-    # Part 1
-    edits = [
-        (1, 12),
-        (2, 2),
-    ]
-    print(intcomp.start(edits=edits))
+    def __init__(self, tape, input_queue):
+        self.tape = tape
+        self.master = copy(tape)
+        self.instructs = {
 
-    # Part 2
-    def seek(n):
-        for i in range(100):
-            for j in range(100):
-                edits = [
-                    (1, i),
-                    (2, j)
-                ]
-                if intcomp.start(edits=edits) == n:
-                    return (i, j)
-        return (0, 0)
+            1:  (self.add_and_store,
+                 self.build_parser(3, store=True),
+                 self.build_positioner(3)),
 
-    i, j = seek(19690720)
-    print(100*i + j)
-    return True
+            2:  (self.mult_and_store,
+                 self.build_parser(3, store=True),
+                 self.build_positioner(3)),
 
+            3:  (self.try_to_store_input,
+                 self.build_parser(1, store=True),
+                 self.build_positioner(1)),
 
-if __name__ == "__main__":
-    main(1)
+            4:  (self.output,
+                 self.build_parser(1, store=True),
+                 self.build_positioner(1)),
+
+            5:  (self.jump_if_true,
+                 self.build_parser(2, store=False),
+                 lambda _: _),  # Null function
+
+            6:  (self.jump_if_false,
+                 self.build_parser(2, store=False),
+                 lambda _: _),  # Null function
+
+            7:  (self.less_than,
+                 self.build_parser(3, store=True),
+                 self.build_positioner(3)),
+
+            8:  (self.equals,
+                 self.build_parser(3, store=True),
+                 self.build_positioner(3)),
+
+            99: (self.halt,
+                 lambda *args, **kwargs: [None],
+                 lambda *args, **kwargs: [None])
+        }
+        self.op_status = {"halted": False, "need input": False}
+        self.pos = 0
+        self.input_queue = input_queue
+        self.storage_address = None
+
+    # ----------Factory Methods for Processing Ops---------
+
+    def build_parser(self, param_count, store=False):
+        """Return parameter-parsing function.
+
+        store - If True, last paramater is storage address.
+        """
+        def parse(self, mode_str):
+            # Add leading zeroes
+            length = len(mode_str)
+            if (to_add := (param_count - length)) > 0:
+                mode_str = "0" * to_add + mode_str
+            mode_list = [int(c) for c in mode_str[::-1]]
+            data_list = []
+            n = param_count - 1 if store else param_count
+            for i in range(n):
+                mode = mode_list[i]
+                if mode:
+                    data_list.append(self[self.pos + i + 1])
+                else:
+                    data_list.append(self[self[self.pos + i + 1]])
+            if store:
+                data_list.append(self[self.pos + param_count])
+            return data_list
+
+        return parse
+
+    def build_positioner(self, to_advance):
+
+        def pos(self):
+            self.pos += to_advance + 1
+
+        return pos
+
+    # --------------Instructions------------------
+
+    def add_and_store(self, addend1, addend2, store_addr):
+        self[store_addr] = addend1 + addend2
+
+    def mult_and_store(self, mult1, mult2, store_addr):
+        self[store_addr] = mult1 * mult2
+
+    def try_to_store_input(self, addr):
+        if self.input_queue:
+            self[addr] = self.input_queue.pop(0)
+        else:
+            assert self.storage_address is None
+            self.storage_address = addr
+            self.op_status["need input"] = True
+
+        # Note that the positioner function runs after this method, even if
+        # there was no input to process.
+
+    def output(self, addr):
+        print(f"OUTPUT ADDRESS {addr}: {self.tape[addr]}")
+
+    def jump_if_true(self, arg1, arg2):
+        if arg1 != 0:
+            self.pos = arg2
+        else:
+            self.pos += 3
+
+    def jump_if_false(self, arg1, arg2):
+        if arg1 == 0:
+            self.pos = arg2
+        else:
+            self.pos += 3
+
+    def less_than(self, arg1, arg2, arg3):
+        if arg1 < arg2:
+            self[arg3] = 1
+        else:
+            self[arg3] = 0
+
+    def equals(self, arg1, arg2, arg3):
+        if arg1 == arg2:
+            self[arg3] = 1
+        else:
+            self[arg3] = 0
+
+    def halt(self, *args, **kwargs):
+        self.op_status["halted"] = True
+
+    # -------------Core Loop-----------------------------
+
+    def run(self, start_pos=0, return_pos=0, edits=(), reset=False):
+
+        if reset:
+            self.tape = copy(self.master)
+            for addr, val in edits:
+                self[addr] = val
+            self.pos = start_pos
+
+        while self.valid_run_status:
+            exec_f, param_f, pos_f = self.instructs[self.data[0]]
+            f_inputs = param_f(self, self.data[-1])
+            exec_f(*f_inputs)
+            pos_f(self)
+
+    # ------------Internals--------------------------------
+
+    @property
+    def data(self):
+        s = str(self[self.pos])
+        instruct_code = int(s[-2:])
+        modes = s[:-2]
+        return (instruct_code, modes)
+
+    @property
+    def valid_run_status(self):
+        return not (
+            self.op_status["halted"]
+            or (
+                self.op_status["need input"]
+                and not self.input_queue))
+
+    def __getitem__(self, key):
+        return self.tape[key]
+
+    def __setitem__(self, key, val):
+        self.tape[key] = val
