@@ -95,10 +95,15 @@ class IntcodeProgram:
         else:
             assert opcode == 4
             self.ix, stop = self.ops[opcode](self.seq, self.ix, modes, self.outputStream) # this mutates the list
-
         return stop
     
     def runUntilStop(self, returnIndex=0):
         while not self.processCurrentOp():
             pass
         return self.seq[returnIndex]
+    
+    def runUntilOutput(self):
+        '''returns an output and a program'''
+        while not self.processCurrentOp():
+            if self.outputStream:
+                return self.outputStream, IntcodeProgram(self.seq.copy(), self.inputStream.copy(), self.ix)

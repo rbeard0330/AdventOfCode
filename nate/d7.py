@@ -23,4 +23,37 @@ def maxThrusterSignal(code):
             biggest = curr
     return biggest
 
-print(maxThrusterSignal(code))
+def iterateChain(programs):
+    '''Given a (chained) list of programs,
+    returns the list, with some program updated'''
+    for ix in range(len(programs)):
+        if programs[ix].inputStream:
+            output, program = programs[ix].runUntilOutput()
+            nextIx = (ix + 1) % len(programs)
+            programs[nextIx].inputStream.append(output[0])
+            programs[ix] = program
+            return output[0], programs # keep track of the last output
+    return False
+
+def initChain(code, phaseSettings, n=5):
+    programs = [IntcodeProgram(code, [phaseSettings[i]]) for i in range(n)]
+    programs[0].inputStream.append(0)
+    return programs
+
+def runToLastOutput(code, phaseSettings, n=5):
+    chain = initChain(code, phaseSettings)
+    lastOutput = None
+    while chain:
+        try:
+            lastOutput, chain = iterateChain(chain)
+        except:
+            return lastOutput
+
+def getMaxOutput(code, signals = (5, 6, 7, 8, 9), n=5):
+    biggest = -9999 #sloppy
+    for p in permutations(signals):
+        if (temp := runToLastOutput(code, list(p))) > biggest:
+            biggest = temp
+    return biggest
+
+print(getMaxOutput(code))
