@@ -71,7 +71,7 @@ class AdvancedIntcoder():
                  self.build_parser(3, store=True),
                  self.build_positioner(3)),
 
-            3:  (self.store_input,
+            3:  (self.try_to_store_input,
                  self.build_parser(1, store=True),
                  self.build_positioner(1)),
 
@@ -94,10 +94,17 @@ class AdvancedIntcoder():
             8:  (self.equals,
                  self.build_parser(3, store=True),
                  self.build_positioner(3)),
+
+            99: (self.halt,
+                 lambda *args, **kwargs: [None],
+                 lambda *args, **kwargs: [None])
         }
-        self.halts = [99]
+        self.op_status = {"halted": False, "need input": False}
         self.pos = 0
         self.input_queue = input_queue
+        self.storage_address = None
+
+    # ----------Factory Methods for Processing Ops---------
 
     def build_parser(self, param_count, store=False):
         """Return parameter-parsing function.
@@ -131,18 +138,7 @@ class AdvancedIntcoder():
 
         return pos
 
-    def run(self, start_pos=0, return_pos=0, edits=()):
-
-        self.tape = copy(self.master)
-        for addr, val in edits:
-            self[addr] = val
-        self.pos = start_pos
-
-        while self.data[0] not in self.halts:
-            exec_f, param_f, pos_f = self.instructs[self.data[0]]
-            f_inputs = param_f(self, self.data[1])
-            exec_f(*f_inputs)
-            pos_f(self)
+    # --------------Instructions------------------
 
     def add_and_store(self, addend1, addend2, store_addr):
         self[store_addr] = addend1 + addend2
@@ -150,8 +146,16 @@ class AdvancedIntcoder():
     def mult_and_store(self, mult1, mult2, store_addr):
         self[store_addr] = mult1 * mult2
 
-    def store_input(self, addr):
-        self[addr] = self.input_queue.pop(0)
+    def try_to_store_input(self, addr):
+        if self.input_queue:
+            self[addr] = self.input_queue.pop(0)
+        else:
+            assert self.storage_address is None
+            self.storage_address = addr
+            self.op_status["need input"] = True
+
+        # Note that the positioner function runs after this method, even if
+        # there was no input to process.
 
     def output(self, addr):
         print(f"OUTPUT ADDRESS {addr}: {self.tape[addr]}")
@@ -180,14 +184,41 @@ class AdvancedIntcoder():
         else:
             self[arg3] = 0
 
+    def halt(self, *args, **kwargs):
+        self.op_status["halted"] = True
+
+    # -------------Core Loop-----------------------------
+
+    def run(self, start_pos=0, return_pos=0, edits=(), reset=False):
+
+        if reset:
+            self.tape = copy(self.master)
+            for addr, val in edits:
+                self[addr] = val
+            self.pos = start_pos
+
+        while self.valid_run_status:
+            exec_f, param_f, pos_f = self.instructs[self.data[0]]
+            f_inputs = param_f(self, self.data[-1])
+            exec_f(*f_inputs)
+            pos_f(self)
+
+    # ------------Internals--------------------------------
+
     @property
     def data(self):
         s = str(self[self.pos])
         instruct_code = int(s[-2:])
-        if instruct_code in self.halts:
-            return [instruct_code]
         modes = s[:-2]
         return (instruct_code, modes)
+
+    @property
+    def valid_run_status(self):
+        return not (
+            self.op_status["halted"]
+            or (
+                self.op_status["need input"]
+                and not self.input_queue))
 
     def __getitem__(self, key):
         return self.tape[key]
