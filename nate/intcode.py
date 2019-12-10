@@ -1,10 +1,8 @@
 class IntcodeProgram:
-    '''A class for representing the sorts of programs
-    we find in AoC 2019 problem 2'''
+    '''See Advent of Code 2019, days 2, 5, and 9'''
 
     def __init__(self, seq, inputStream = [], ix=0):
         self.seq = {ix : v for ix, v in enumerate(seq)}
-        self.init_seq = self.seq.copy() # freeze the initial sequence
         self.inputStream = inputStream
         self.outputStream = []
         self.ix = ix
@@ -27,7 +25,7 @@ class IntcodeProgram:
                 result.append(self.seq.get(self.seq.get(self.ix+i+1,0) + self.relativeBase, 0))
             else:
                 raise ValueError(f"Didn't understand param {curr} [{type(curr)}].")
-        return result, self.seq.get(self.ix+numParams, 0) + (0 if curr != 2 else self.relativeBase) # for cases where you need to jump / write
+        return result, self.seq.get(self.ix+numParams, 0) + (0 if curr != 2 else self.relativeBase) # the latter for writing instructions
 
     def add(self, modes):
         values, toWrite = self.getParams(modes, 3)
