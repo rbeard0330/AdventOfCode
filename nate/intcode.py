@@ -1,100 +1,114 @@
-def getParams(l, ix, modes, numParams):
-    '''Given the current sequence <l>
-    and the current index <ix>
-    and the explicit modes <modes>
-    and the number of parameters taken by the op <numParams>,
-    returns the parameter values.'''
-    result = []
-    for i in range(numParams):
-        try:
-            result.append(l[ix+i+1] if modes[i] == 1 else l[l[ix+i+1]])
-        except:
-            result.append(l[l[ix+i+1]])
-    return result, l[ix+numParams] # for cases where you need to jump / write
-
-def add(l, ix, modes):
-    values, toWrite = getParams(l, ix, modes, 3)
-    s = values[0] + values[1]
-    l[toWrite] = s
-    return ix + 4, False
-
-def multiply(l, ix, modes):
-    values, toWrite = getParams(l, ix, modes, 3)
-    s = values[0] * values[1]
-    l[toWrite] = s
-    return ix + 4, False
-
-def jumpIfTrue(l, ix, modes):
-    values, _ = getParams(l, ix, modes, 2)
-    return (values[1] if values[0] else ix + 3), False
-
-def jumpIfFalse(l, ix, modes):
-    values, _ = getParams(l, ix, modes, 2)
-    return (values[1] if not values[0] else ix + 3), False
-
-def lessThan(l, ix, modes):
-    values, toWrite = getParams(l, ix, modes, 3)
-    l[toWrite] = 1 if values[0] < values[1] else 0
-    return (ix + 4), False
-
-def equalTo(l, ix, modes):
-    values, toWrite = getParams(l, ix, modes, 3)
-    l[toWrite] = 1 if values[0] == values[1] else 0
-    return (ix + 4), False
-
-def takeInput(l, ix, modes, inputStream):
-    _, toWrite = getParams(l, ix, modes, 1)
-    l[toWrite] = inputStream.pop(0)
-    return ix + 2, False
-
-def makeOutput(l, ix, modes, outputStream):
-    _, toOutput = getParams(l, ix, modes, 1)
-    outputValue = l[toOutput]
-    outputStream.append(outputValue)
-    return ix + 2, False
-
-def stop(l, ix, modes):
-    return ix, True
-
-def parseOp(n):
-    opcode = n % 100
-    modes = [int(char) for char in str(int(n / 100))[::-1]]
-    return opcode, modes
-        
 class IntcodeProgram:
     '''A class for representing the sorts of programs
     we find in AoC 2019 problem 2'''
 
+    def __init__(self, seq, inputStream = [], ix=0):
+        self.seq = {ix : v for ix, v in enumerate(seq)}
+        self.init_seq = self.seq.copy() # freeze the initial sequence
+        self.inputStream = inputStream
+        self.outputStream = []
+        self.ix = ix
+        self.relativeBase = 0
+    
+    def getParams(self, modes, numParams):
+        '''Given the current sequence <l>
+        and the current index <ix>
+        and the explicit modes <modes>
+        and the number of parameters taken by the op <numParams>,
+        returns the parameter values.'''
+        result = []
+        for i in range(numParams):
+            curr = modes[i] if i < len(modes) else 0
+            if curr == 0:
+                result.append(self.seq.get(self.seq.get(self.ix+i+1, 0), 0))
+            elif curr == 1:
+                result.append(self.seq.get(self.ix+i+1, 0))
+            elif curr == 2:
+                result.append(self.seq.get(self.seq.get(self.ix+i+1,0) + self.relativeBase, 0))
+            else:
+                raise ValueError(f"Didn't understand param {curr} [{type(curr)}].")
+        return result, self.seq.get(self.ix+numParams, 0) + (0 if curr != 2 else self.relativeBase) # for cases where you need to jump / write
+
+    def add(self, modes):
+        values, toWrite = self.getParams(modes, 3)
+        s = values[0] + values[1]
+        self.seq[toWrite] = s
+        self.ix += 4
+        return False # doesn't halt
+
+    def multiply(self, modes):
+        values, toWrite = self.getParams(modes, 3)
+        s = values[0] * values[1]
+        self.seq[toWrite] = s
+        self.ix += 4
+        return False # doesn't halt
+
+    def jumpIfTrue(self, modes):
+        values, _ = self.getParams(modes, 2)
+        self.ix = (values[1] if values[0] else self.ix + 3)
+        return False
+
+    def jumpIfFalse(self, modes):
+        values, _ = self.getParams(modes, 2)
+        self.ix = (values[1] if not values[0] else self.ix + 3)
+        return False
+
+    def lessThan(self, modes):
+        values, toWrite = self.getParams(modes, 3)
+        self.seq[toWrite] = 1 if values[0] < values[1] else 0
+        self.ix += 4
+        return False
+
+    def equalTo(self, modes):
+        values, toWrite = self.getParams(modes, 3)
+        self.seq[toWrite] = 1 if values[0] == values[1] else 0
+        self.ix += 4
+        False
+
+    def takeInput(self, modes):
+        _, toWrite = self.getParams(modes, 1)
+        self.seq[toWrite] = self.inputStream.pop(0)
+        self.ix += 2
+        return False
+
+    def makeOutput(self, modes):
+        result, _ = self.getParams(modes, 1)
+        self.outputStream.append(result[-1])
+        self.ix += 2
+        return False
+
+    def modifyRelativeBase(self, modes):
+        params, _ = self.getParams(modes, 1)
+        self.relativeBase += params[0]
+        self.ix += 2
+        return False
+
+    def stop(self, modes):
+        return True
+
+    def parseOp(self, n):
+        opcode = n % 100
+        modes = [int(char) for char in str(int(n / 100))[::-1]]
+        return opcode, modes
+            
     ops = {
-           1 : add, # adding
-           2 : multiply, # multiplying
+           1 : add,
+           2 : multiply,
            3 : takeInput,
            4 : makeOutput,
            5 : jumpIfTrue,
            6 : jumpIfFalse,
            7 : lessThan,
            8 : equalTo,
+           9 : modifyRelativeBase,
            99 : stop,
            }
 
-    def __init__(self, seq, inputStream = [], ix=0):
-        self.seq = seq.copy()
-        self.init_seq = tuple(seq) # freeze the initial sequence
-        self.inputStream = inputStream
-        self.outputStream = []
-        self.ix = ix
-    
     def processCurrentOp(self):
         '''Returns whether to stop'''
-        opcode, modes = parseOp(self.seq[self.ix])
+        opcode, modes = self.parseOp(self.seq[self.ix])
         assert opcode in self.ops
-        if opcode not in (3, 4):
-            self.ix, stop = self.ops[opcode](self.seq, self.ix, modes) # this mutates the list
-        elif opcode == 3:
-            self.ix, stop = self.ops[opcode](self.seq, self.ix, modes, self.inputStream) # this mutates the list
-        else:
-            assert opcode == 4
-            self.ix, stop = self.ops[opcode](self.seq, self.ix, modes, self.outputStream) # this mutates the list
+        stop = self.ops[opcode](self, modes) # this changes a lot of self's internal state
         return stop
     
     def runUntilStop(self, returnIndex=0):
