@@ -123,7 +123,7 @@ class AdvancedIntcoder():
         Parameters for storing the results of operations are handled
         differently from data parameters.  For data parameters, this method
         looks up the data from the relevant addresses (in relative/position
-        mode).  For storage parameters, the target address is return.
+        mode).  For storage parameters, the target address is returned.
 
         store_in_last - If True, last paramater is a storage address.
         """
