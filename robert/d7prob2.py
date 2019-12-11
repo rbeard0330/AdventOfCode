@@ -1,8 +1,6 @@
-import os.path
-from copy import copy
 from itertools import permutations
 
-from util.intcode import AdvancedIntcoder
+from util.intcode import AdvancedIntcoder, parse_input
 
 
 class AmpIntcoder(AdvancedIntcoder):
@@ -19,14 +17,10 @@ class AmpIntcoder(AdvancedIntcoder):
 
         self.pass_output = output_machine.receive_input
 
-    def reset(self, new_phase):
-        self.tape = copy(self.master)
-        self.input_queue = [new_phase]
+    def reset(self, new_phase, *args, **kwargs):
+        kwargs["clear_tape"] = True
+        super().reset([new_phase], *args, **kwargs)
         self.output_queue = []
-        self.pos = 0
-        self.storage_address = None
-        for value in self.op_status:
-            self.op_status[value] = False
 
     # -------------Core Loop-----------------------------
 
@@ -134,14 +128,7 @@ class AmpGroup():
         return self.best
 
 
-file_name = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "inputs", "d7.txt")
-
-s_tape = []
-with open(file_name, "r") as f:
-    for line in f.readlines():
-        s_tape += line.split(",")
-tape = [int(s) for s in s_tape]
+tape = parse_input("d7.txt")
 
 phase_set = {5, 6, 7, 8, 9}
 a = AmpGroup(5)
