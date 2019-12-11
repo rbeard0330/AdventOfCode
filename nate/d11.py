@@ -31,7 +31,7 @@ while True:
         maxX = max([i[0] for i in colors.keys()])
         minY = min([i[1] for i in colors.keys()])
         maxY = max([i[1] for i in colors.keys()])
-        for y in range(minY-1, maxY+2):
+        for y in range(minY-1, maxY+2)[::-1]:
             # will print upside-down
             print(''.join(['X' if colors.get((x, y), 0) != 0 else ' ' for x in range(minX-1, maxX + 2)]))
         break
