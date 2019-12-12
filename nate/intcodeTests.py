@@ -1,4 +1,4 @@
-from intcode import IntcodeProgram
+from intcode import IntcodeProgram, intcodeLoad
 import unittest
 
 class TestJumps(unittest.TestCase):
@@ -35,8 +35,7 @@ class TestDay9Examples(unittest.TestCase):
 
 class TestDay9A(unittest.TestCase):
     def test1(self):
-        with open('nate/inputs/in9.txt', 'r') as f:
-            code = [int(i) for i in f.readline().strip().split(',')]
+        code = intcodeLoad(9)
         program = IntcodeProgram(code, [1])
         program.runUntilOutput()
         self.assertEqual(program.outputStream[0], 3013554615)

@@ -1,3 +1,17 @@
+def intcodeLoad(path, outputType = 'seq'):
+    '''Given a path to a file containing an Intcode program,
+    returns the sequence as a list suitable for initializing
+    an IntcodeProgram (optionally just returns the program)'''
+    if type(path) == int or path.isnumeric() or path[:-1].isnumeric(): # accept "12" or "12c"
+        path = f'inputs/in{path}.txt'
+    try:
+        with open(path, 'r') as f:
+            seq = [int(i) for i in f.readline().strip().split(',')]
+    except:
+        with open('nate/' + path, 'r') as f:
+            seq = [int(i) for i in f.readline().strip().split(',')]
+    return seq
+
 class IntcodeProgram:
     '''See Advent of Code 2019, days 2, 5, and 9'''
 

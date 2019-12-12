@@ -1,7 +1,6 @@
-from intcode import IntcodeProgram
+from intcode import IntcodeProgram, intcodeLoad
 
-with open('nate/inputs/in11.txt', 'r') as f:
-    code = [int(i) for i in f.readline().strip().split(',')]
+code = intcodeLoad(11)
 
 DIRS = [(0, 1), (1, 0), (0, -1), (-1, 0)] # U, R, D, L
 coord = (0, 0)
