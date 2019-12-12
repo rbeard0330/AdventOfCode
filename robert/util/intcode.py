@@ -77,7 +77,7 @@ class AdvancedIntcoder():
                  self.build_positioner(1)),
 
             4:  (self.output,
-                 self.build_parser(1, store_in_last=True),
+                 self.build_parser(1, store_in_last=False),
                  self.build_positioner(1)),
 
             5:  (self.jump_if_true,
@@ -131,8 +131,7 @@ class AdvancedIntcoder():
         def parse(self, mode_str):
 
             # Normalize number of modes to param_count
-            length = len(mode_str)
-            if (to_add := (param_count - length)) > 0:
+            if (to_add := (param_count - len(mode_str))) > 0:
                 mode_str = "0" * to_add + mode_str
 
             mode_list = [int(c) for c in mode_str[::-1]]
@@ -188,8 +187,8 @@ class AdvancedIntcoder():
             self.storage_address = addr
             self.op_status["need input"] = True
 
-    def output(self, addr):
-        print(f"OUTPUT ADDRESS {addr}: {self.tape[addr]}")
+    def output(self, val):
+        print(f"OUTPUT: {val}")
 
     def jump_if_true(self, arg1, arg2):
         if arg1 != 0:
@@ -255,20 +254,26 @@ class AdvancedIntcoder():
                 and not self.input_queue))
 
     def __getitem__(self, addr):
-        if (val := self.tape[addr]) is not None:
-            return val
-        else:
-            raise Exception("Attempted to read from uninitialized memory"
-                            f"address: {addr}")
+        try:
+            return self.tape[addr]
+        except IndexError:
+            self._extend_to_addr(addr)
+            return 0
 
     def __setitem__(self, addr, val):
 
         # Extend tape as needed to provide extra memory
+        try:
+            self.tape[addr] = val
+        except IndexError:
+            self._extend_to_addr(addr)
+            self.tape[addr] = val
+
+    def _extend_to_addr(self, addr):
         if (ext_length := (addr - len(self.tape) + 1)) > 0:
             if ext_length > 10**6:
                 print(f"Creating {ext_length} slots of empty memory!")
-            self.tape += [None for _ in range(ext_length)]
-        self.tape[addr] = val
+            self.tape += [0 for _ in range(ext_length)]
 
 
 def parse_input(file_name):

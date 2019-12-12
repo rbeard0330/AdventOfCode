@@ -28,7 +28,7 @@ class AmpIntcoder(AdvancedIntcoder):
         self.reset()
         return return_value
 
-    def reset(self):
+    def reset(self, *args, **kwargs):
         for value in self.op_status:
             self.op_status[value] = False
 
