@@ -72,6 +72,7 @@ def run_tests():
     assert calc_total_energy(body_list) == 1940
 
 
+run_tests()
 file_name = get_input_file_name("d12.txt")
 file_lines = []
 with open(file_name, "r") as f:

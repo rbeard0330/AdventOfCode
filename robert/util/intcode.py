@@ -114,6 +114,7 @@ class AdvancedIntcoder():
         self.input_queue = input_queue
         self.storage_address = None
         self.relative_base = 0
+        self.output_queue = []
 
     # ----------Factory Methods for Processing Ops---------
 
@@ -222,13 +223,12 @@ class AdvancedIntcoder():
 
     # -------------Core Loop-----------------------------
 
-    def run(self, start_pos=0, return_pos=0, edits=(), reset=False):
+    def run(self, edits=None, reset=False):
 
         if reset:
             self.tape = copy(self.master)
             for addr, val in edits:
                 self[addr] = val
-            self.pos = start_pos
 
         while self.valid_run_status:
             exec_f, param_f, pos_f = self.instructs[self.data[0]]
