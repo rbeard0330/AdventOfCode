@@ -231,6 +231,8 @@ class AdvancedIntcoder():
                 self[addr] = val
 
         while self.valid_run_status:
+            if self.input_processing_needed:
+                self.process_input()
             exec_f, param_f, pos_f = self.instructs[self.data[0]]
             f_inputs = param_f(self, self.data[-1])
             exec_f(*f_inputs)
@@ -252,6 +254,16 @@ class AdvancedIntcoder():
             or (
                 self.op_status["need input"]
                 and not self.input_queue))
+    
+    @property
+    def input_processing_needed(self):
+        return self.op_status["need input"] and self.input_queue
+    
+    def process_input(self):
+        stored_input = self.input_queue.pop(0)
+        self[self.storage_address] = stored_input
+        self.storage_address = None
+        self.op_status["need input"] = False
 
     def __getitem__(self, addr):
         try:
