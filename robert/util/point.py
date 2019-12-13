@@ -50,6 +50,66 @@ class Point:
     def sort(p):
         return (p.x, p.y)
 
+
+@dataclass
+class ThreeDVect():
+    x:  int
+    y:  int
+    z:  int
+
+    def __iadd__(self, other):
+        if isinstance(other, tuple) or isinstance(other, list):
+            self.x += other[0]
+            self.y += other[1]
+            self.z += other[2]
+            return self
+        elif isinstance(other, ThreeDVect):
+            self.x += other.x
+            self.y += other.y
+            self.z += other.z
+            return self
+        else:
+            raise NotImplementedError
+
+    def __add__(self, other):
+        if isinstance(other, tuple) or isinstance(other, list):
+            return ThreeDVect(self.x + other[0], self.y + other[1], self.z +
+                              other[2])
+        elif isinstance(other, Point):
+            return ThreeDVect(
+                self.x + other.x, self.y + other.y, self.z + other.z)
+        else:
+            raise NotImplementedError
+
+    def __sub__(self, other):
+        try:
+            return self + other * -1
+        except (NotImplementedError, TypeError):
+            raise TypeError(f"Cannot subtract {type(other)} from Point")
+
+    def __mul__(self, other):
+        if isinstance(other, int):
+            return ThreeDVect(self.x * other, self.y * other, self.z * other)
+        else:
+            raise NotImplementedError
+
+    def __eq__(self, other):
+        try:
+            return (
+                self.x == other.x and self.y == other.y and self.z == other.z)
+        except AttributeError:
+            raise TypeError(f"Cannot compare Point with {type(other)}")
+        
+    def __iter__(self):
+        yield self.x
+        yield self.y
+        yield self.z
+
+    @staticmethod
+    def sort(v):
+        return (v.x, v.y, v.z)
+
+
 @dataclass
 class Segment:
     p1: Point
