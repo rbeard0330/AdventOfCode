@@ -1,5 +1,4 @@
 import os
-from copy import copy
 
 from util.intcode import AdvancedIntcoder, parse_input
 from util.file_ops import get_input_file_name
@@ -12,12 +11,13 @@ class GameCoder(AdvancedIntcoder):
 
 class GraphicalGameCoder(AdvancedIntcoder):
 
-    def __init__(self, w, h, *args, **kwargs):
+    def __init__(self, w, h, *args, vis=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.w = w
         self.h = h
         self.area = w * h
         self.pixels = {}
+        self.vis = vis
 
     def output(self, val):
         self.output_queue.append(val)
@@ -26,80 +26,43 @@ class GraphicalGameCoder(AdvancedIntcoder):
             new_data = self.output_queue[-1]
             if loc not in self.pixels or self.pixels[loc] != new_data:
                 self.pixels[loc] = new_data
-                if tuple(self.output_queue[:2]) == (-1, 0):
+                assert isinstance(loc, tuple)
+                assert len(loc) == 2
+                assert isinstance(self.pixels[loc], int)
+                if loc == (-1, 0):
                     self.score = self.output_queue[2]
                 elif len(self.pixels) >= self.area:
-                    self.draw()
+                    if self.vis:
+                        self.draw()
             self.output_queue = []
 
     def draw(self):
         os.system("cls")
         s_list = []
-        for y in range(self.h):
+        for y in range(self.h + 1):
             row_list = []
-            for x in range(self.w):
+            for x in range(self.w + 1):
                 row_list.append(PIXEL_KEY[self.pixels.get((x, y), 0)])
             s_list.append("".join(row_list))
         print("\n".join(s_list))
 
 
-
 def hack(game):
+    game.reset([], clear_tape=True)
     game.tape[0] = 2
-    game.master[0] = 2 
-    checkpoints = []
-    t, offset = run_out_game(game)
-    screen = game.pixels        # Game state when we lose
-    block_set = {key for key in screen if screen[key] == 2}
-    inputs = ([0] * (t - abs(offset))
-              + [offset // abs(offset)] * abs(offset))
-    print(inputs)
-    while block_set:
-        # Revert game state
-        game.op_status["halted"] = False
-        saved_inputs = copy(inputs)
-        t, offset = run_out_game(game, inputs)
-        inputs = (saved_inputs
-                  # Fill goes in the middle so we don't leave the last
-                  # position too early
-                  + [0] * (t - abs(offset) - len(saved_inputs) - 2)
-                  + [offset // abs(offset)] * abs(offset))
-        clears = set()
-        for block in block_set:
-            if game.pixels[block] != 2:
-                clears.add(block) 
-        block_set -= clears
+    while not game.op_status["halted"]:
+        game.run()
+        for key in game.pixels:
+            if game.pixels[key] == 4:
+                b_x = key[0]
+            elif game.pixels[key] == 3:
+                p_x = key[0]
+        i = (b_x - p_x) / abs(b_x - p_x) if b_x != p_x else 0
+        game.input_queue.append(i)
     return game.score
 
-def run_out_game(game, inputs=None):
-    elapsed = 0
-    game.reset([], clear_tape=True)
-    while not game.op_status["halted"]:
-            game.run()
-            if inputs:
-                game.input_queue.append(inputs.pop(0))
-            else:
-                game.input_queue.append(0)
-            elapsed += 1
-        # Game ends... for now
-    player, ball = find_player_and_ball(game.pixels)
-    game.pixels[player] = 0
-    game.pixels[ball] = 0       # The game will redraw
-    offset = player - ball
-    return elapsed, offset
 
-def find_player_and_ball(screen):
-    player = ball = None
-    for key in screen:
-        if screen[key] == 4:
-            ball = key[0]   # Only x-value needed
-        elif screen[key] == 3:
-            player = key[0]
-        if ball and player:
-            break
-    return ball, player
-    
-PIXEL_KEY = {0: " ", 1: "|", 2: "▮", 3:"___", 4:"⬤"}
+PIXEL_KEY = {0: " ", 1: "|", 2: "▮", 3: "___", 4: "⬤"}
 
 file_name = get_input_file_name("d13.txt")
 game = GameCoder(tape := parse_input(file_name), [])
@@ -119,4 +82,4 @@ for key in tiles:
     max_y = max(max_y, key[1])
 
 arcade = GraphicalGameCoder(max_x, max_y, tape, [])
-hack(arcade)
+print("Part 2:\n", hack(arcade))

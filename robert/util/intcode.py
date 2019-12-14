@@ -254,11 +254,11 @@ class AdvancedIntcoder():
             or (
                 self.op_status["need input"]
                 and not self.input_queue))
-    
+
     @property
     def input_processing_needed(self):
         return self.op_status["need input"] and self.input_queue
-    
+
     def process_input(self):
         stored_input = self.input_queue.pop(0)
         self[self.storage_address] = stored_input

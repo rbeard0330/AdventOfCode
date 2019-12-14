@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class Point:
     x:  int
@@ -99,7 +100,7 @@ class ThreeDVect():
                 self.x == other.x and self.y == other.y and self.z == other.z)
         except AttributeError:
             raise TypeError(f"Cannot compare Point with {type(other)}")
-        
+
     def __iter__(self):
         yield self.x
         yield self.y
