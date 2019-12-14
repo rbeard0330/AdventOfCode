@@ -1,6 +1,6 @@
 from util.file_ops import get_input_file_name
 from math import ceil
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from d14tests import answer_list, test_list
 
@@ -63,7 +63,7 @@ for input_tup in RXN_DICT.values():
     s = {item[1] for item in input_tup[1]}
     output_set |= s
 compound_sinks = {c for c in RXN_DICT} - output_set
-complexity_list = []
+complexity_list = deque()
 print(output_set)
 print(compound_list)
 print(RXN_DICT["FUEL"])
