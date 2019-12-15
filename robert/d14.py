@@ -1,8 +1,11 @@
 from util.file_ops import get_input_file_name
-from math import ceil
+from math import ceil, floor
 from collections import defaultdict, deque
+from copy import copy
 
 from d14tests import answer_list, test_list
+
+
 def parse_rxn(string, RXN_DICT, USED_IN_DICT):
     lhs, rhs = string.split(" => ")
     lhs = lhs.split(", ")
@@ -30,39 +33,38 @@ def DFS(input, complexity_list, visited, USED_IN_DICT):
             DFS(output, complexity_list, visited, USED_IN_DICT)
     complexity_list.appendleft(input)
 
+def find_ore_cost(quantity_out, product, complexity_list, RXN_DICT):
+    reqs_list = RXN_DICT[product][1]  # list of tuples (n, input_compound)
+    # Sort so high-complexity compounds are first
+    reqs_list.sort(key=lambda p: complexity_list.index(p[1]), reverse=True)
+    reqs_dict = defaultdict(int)
+    for amt, input_c in reqs_list:
+        reqs_dict[input_c] += quantity_out * amt
+    leftovers = defaultdict(int)
+    while len(reqs_dict) > 1:
+        reagent = complexity_list.pop()
+        if reagent in reqs_dict:
+            amt_needed = reqs_dict[reagent]
+            del(reqs_dict[reagent])
+        else:
+            continue  # We don't need this reagent
 
-def find_ore_costs(complexity_list, RXN_DICT):
-    # Entries are tuples: (ore cost per batch, size of
-    # batch, list of byproducts per batch)
-    synthesis = {"ORE": (1, 1, [])}  
-    for target in complexity_list:
-        if target == "ORE":
-            continue
-        batch_size, inputs = RXN_DICT[target]
-        # reqs is a list of (amt, compound) tuples
-        reqs = sorted(inputs,
-                      key=lambda c: complexity_list.index(c[1]),
-                      reverse=True)
-        on_hand = defaultdict(int)  # key = cmpd, val = amt
-        ore_cost = 0
-        for c in reqs:
-            c0, c1 = c
-            if c1 in on_hand:
-                c0 -= (used := min(c0, on_hand[c1]))
-                on_hand[c1] -= used
-            if c0 == 0:
-                continue
-            c_cost, c_size, c_lefts = synthesis[c1]
-            if c1 != "ORE":
-                on_hand[c1] += c_size - c0 % c_size
-            for amt, left_comp in c_lefts:
-                on_hand[left_comp] += amt
-            batches_needed = ceil(c0 / c_size)
-            ore_cost += c_cost * batches_needed
-        synthesis[target] = (
-            ore_cost, batch_size, [(v, k) for k, v in on_hand.items()])
-    
-    return synthesis
+        # Decide how many batches we need and save extra
+        batch_size, new_reqs = RXN_DICT[reagent]
+        batches = ceil(amt_needed / batch_size)
+        leftovers[reagent] += batch_size * batches - amt_needed
+
+        # Add new reqs to existing dict
+        for amt, input_c in new_reqs:
+            reqs_dict[input_c] += batches * amt
+        for avail in leftovers:
+            if avail in reqs_dict:
+                used = min(leftovers[avail], reqs_dict[avail])
+                reqs_dict[avail] -= used
+                leftovers[avail] -= used
+
+    assert len(reqs_dict) == 1 and "ORE" in reqs_dict
+    return reqs_dict["ORE"]
 
 
 def tests():
@@ -72,11 +74,11 @@ def tests():
         for line in t.split("\n"):
             parse_rxn(line, rxn_dict, used_in_dict)
         complexity_list = topo_sort(used_in_dict)
-        a = find_ore_costs(complexity_list, rxn_dict)
-        print(a)
-        print(a["FUEL"][0], answer_list[i])
+        a = find_ore_cost(1, "FUEL", copy(complexity_list), rxn_dict)
+        assert a == answer_list[i]
 
-"""
+
+
 RXN_DICT = {}
 USED_IN_DICT = defaultdict(list)
 line_count = 0
@@ -87,10 +89,16 @@ with open(fn, "r") as f:
         parse_rxn(line.strip(), RXN_DICT, USED_IN_DICT)
 assert len(RXN_DICT) == line_count
 
-complexity_list = topo_sort()
+complexity_list = topo_sort(USED_IN_DICT)
 assert len(complexity_list) == len(RXN_DICT) + 1 # ORE not in RXN_DICT
-cost_dict = find_ore_costs(complexity_list)
-print(cost_dict["FUEL"])
-"""
+print(
+    "Part 1:\n", (per := find_ore_cost(1, "FUEL", copy(complexity_list), RXN_DICT)))
 
-tests()
+# Iterate until we find right answer
+guess = floor(10**12 / per)
+budget = 10**12
+while ((curr := find_ore_cost(guess, "FUEL", copy(complexity_list), RXN_DICT))
+       < budget - per):
+    guess += floor((budget - curr) / per)
+print("Part 2:\n", guess)
+
