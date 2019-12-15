@@ -3,7 +3,6 @@ from math import ceil
 from collections import defaultdict, deque
 
 from d14tests import answer_list, test_list
-
 def parse_rxn(string, RXN_DICT, USED_IN_DICT):
     lhs, rhs = string.split(" => ")
     lhs = lhs.split(", ")
@@ -17,36 +16,67 @@ def parse_rxn(string, RXN_DICT, USED_IN_DICT):
     RXN_DICT[out_compound] = (int(num_out), inputs)
         
 
-# sort keys so that no reaction has an input that isn't an output of a prior
-# reaction (or ORE)
+def topo_sort(used_in_dict):
+    complexity_list = deque()
+    visited = set()
+    DFS("ORE", complexity_list, visited, used_in_dict)
+    return complexity_list
 
 
+def DFS(input, complexity_list, visited, USED_IN_DICT):
+    visited.add(input)
+    for output in USED_IN_DICT[input]:
+        if output not in visited:
+            DFS(output, complexity_list, visited, USED_IN_DICT)
+    complexity_list.appendleft(input)
 
-def get_reqs(amt, compound):
-    if compound == "ORE":
-        return [(amt, "ORE")]
-    req_list = []
-    amt_produced, reagent_list = RXN_DICT[compound]
-    n = ceil(amt / amt_produced)
-    for r in reagent_list:
-        req_list += get_reqs(*r)
-    req_dict = defaultdict(int)
-    for r in req_list:
-        req_dict[r[1]] += n* r[0]
-    return_list = []
-    for key, val in req_dict.items():
-        return_list.append((val, key))
-    return return_list
-        
+
+def find_ore_costs(complexity_list, RXN_DICT):
+    # Entries are tuples: (ore cost per batch, size of
+    # batch, list of byproducts per batch)
+    synthesis = {"ORE": (1, 1, [])}  
+    for target in complexity_list:
+        if target == "ORE":
+            continue
+        batch_size, inputs = RXN_DICT[target]
+        # reqs is a list of (amt, compound) tuples
+        reqs = sorted(inputs,
+                      key=lambda c: complexity_list.index(c[1]),
+                      reverse=True)
+        on_hand = defaultdict(int)  # key = cmpd, val = amt
+        ore_cost = 0
+        for c in reqs:
+            c0, c1 = c
+            if c1 in on_hand:
+                c0 -= (used := min(c0, on_hand[c1]))
+                on_hand[c1] -= used
+            if c0 == 0:
+                continue
+            c_cost, c_size, c_lefts = synthesis[c1]
+            if c1 != "ORE":
+                on_hand[c1] += c_size - c0 % c_size
+            for amt, left_comp in c_lefts:
+                on_hand[left_comp] += amt
+            batches_needed = ceil(c0 / c_size)
+            ore_cost += c_cost * batches_needed
+        synthesis[target] = (
+            ore_cost, batch_size, [(v, k) for k, v in on_hand.items()])
+    
+    return synthesis
+
 
 def tests():
     for i, t in enumerate(test_list):
-        RXN_DICT = {}
-        USED_IN_DICT = defaultdict(list)
+        rxn_dict = {}
+        used_in_dict = defaultdict(list)
         for line in t.split("\n"):
-            parse_rxn(line, RXN_DICT, USED_IN_DICT)
+            parse_rxn(line, rxn_dict, used_in_dict)
+        complexity_list = topo_sort(used_in_dict)
+        a = find_ore_costs(complexity_list, rxn_dict)
+        print(a)
+        print(a["FUEL"][0], answer_list[i])
 
-
+"""
 RXN_DICT = {}
 USED_IN_DICT = defaultdict(list)
 line_count = 0
@@ -57,14 +87,10 @@ with open(fn, "r") as f:
         parse_rxn(line.strip(), RXN_DICT, USED_IN_DICT)
 assert len(RXN_DICT) == line_count
 
-compound_list = list(RXN_DICT.keys())
-output_set = set()
-for input_tup in RXN_DICT.values():
-    s = {item[1] for item in input_tup[1]}
-    output_set |= s
-compound_sinks = {c for c in RXN_DICT} - output_set
-complexity_list = deque()
-print(output_set)
-print(compound_list)
-print(RXN_DICT["FUEL"])
+complexity_list = topo_sort()
+assert len(complexity_list) == len(RXN_DICT) + 1 # ORE not in RXN_DICT
+cost_dict = find_ore_costs(complexity_list)
+print(cost_dict["FUEL"])
+"""
+
 tests()
