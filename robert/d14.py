@@ -17,7 +17,7 @@ def parse_rxn(string, RXN_DICT, USED_IN_DICT):
         USED_IN_DICT[compound].append(out_compound)
     assert out_compound not in RXN_DICT
     RXN_DICT[out_compound] = (int(num_out), inputs)
-        
+
 
 def topo_sort(used_in_dict):
     complexity_list = deque()
@@ -32,6 +32,7 @@ def DFS(input, complexity_list, visited, USED_IN_DICT):
         if output not in visited:
             DFS(output, complexity_list, visited, USED_IN_DICT)
     complexity_list.appendleft(input)
+
 
 def find_ore_cost(quantity_out, product, complexity_list, RXN_DICT):
     reqs_list = RXN_DICT[product][1]  # list of tuples (n, input_compound)
@@ -78,7 +79,6 @@ def tests():
         assert a == answer_list[i]
 
 
-
 RXN_DICT = {}
 USED_IN_DICT = defaultdict(list)
 line_count = 0
@@ -92,7 +92,8 @@ assert len(RXN_DICT) == line_count
 complexity_list = topo_sort(USED_IN_DICT)
 assert len(complexity_list) == len(RXN_DICT) + 1 # ORE not in RXN_DICT
 print(
-    "Part 1:\n", (per := find_ore_cost(1, "FUEL", copy(complexity_list), RXN_DICT)))
+    "Part 1:\n",
+    (per := find_ore_cost(1, "FUEL", copy(complexity_list), RXN_DICT)))
 
 # Iterate until we find right answer
 guess = floor(10**12 / per)
@@ -101,4 +102,3 @@ while ((curr := find_ore_cost(guess, "FUEL", copy(complexity_list), RXN_DICT))
        < budget - per):
     guess += floor((budget - curr) / per)
 print("Part 2:\n", guess)
-

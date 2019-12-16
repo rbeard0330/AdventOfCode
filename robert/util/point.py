@@ -38,11 +38,20 @@ class Point:
         else:
             raise NotImplementedError
 
+    def __rmul__(self, other):
+        if isinstance(other, int):
+            return Point(self.x * other, self.y * other)
+        else:
+            raise NotImplementedError
+
     def __eq__(self, other):
         try:
             return self.x == other.x and self.y == other.y
         except AttributeError:
             raise TypeError(f"Cannot compare Point with {type(other)}")
+
+    def __repr__(self):
+        return f"p({self.x}, {self.y})"
 
     def transpose(self):
         return Point(self.y, self.x)
