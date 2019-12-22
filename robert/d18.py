@@ -1,19 +1,20 @@
 from copy import deepcopy
-from collections import deque
+from collections import deque, defaultdict
 
 from util.point import Point, Dirs
 from util.file_ops import get_input_file_name
 
 DOORS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 KEYS = "abcdefghijklmnopqrstuvwxyz"
+ALL_KEYS = {c.upper() for c in KEYS}   # We use upper case later
 
 
 def find_shortest_paths(graph):
     "Implements Floyd-Warshall."
-    
+
     global NaN
-    NaN = len(graph) ** 2
-    distances = {p1:{p2: NaN for p2 in graph} for p1 in graph}
+    NaN = 26 * len(graph) ** 2
+    distances = {p1: {p2: NaN for p2 in graph} for p1 in graph}
     # next_step = {p1:{p2: None for p2 in graph} for p1 in graph}
 
     assert len(graph) == len(distances)
@@ -30,7 +31,7 @@ def find_shortest_paths(graph):
         # next_step[v][u] = u
     for v in graph:
         distances[v][v] = 0
-        # next_step[v][v] = v  
+        # next_step[v][v] = v
     for k in graph:
         for i in graph:
             for j in graph:
@@ -44,8 +45,19 @@ def find_shortest_paths(graph):
                     # next_step[j][i] = next_step[j][k]
     assert (distances[p1][p2] + distances[p2][p3] >= distances[p1][p3]
             for p1 in graph for p2 in graph for p3 in graph)
-        # Readable triple loop!
-    return distances #, next_step
+            # Readable triple loop!
+    return distances  # , next_step
+
+
+def edges(graph):
+    "Yields undirected edges in graph."
+
+    visited = set()
+    for u in graph:
+        visited.add(u)
+        for v in graph[u]:
+            if v not in visited:
+                yield (u, v)
 
 
 def get_components(point_set, dists):
@@ -75,43 +87,52 @@ def component_from_p(p, comp_list=None):
                 return c
 
 
-def create_component_graph(graph, dists, doors, door_connects):
-    door_connects = deepcopy(door_connects)
-    comp_list = get_components(set(graph.keys()), dists)
+def create_component_graph(dists, orig_door_connects):
+    """Finds components of graph, then builds a graph of their connections.
+
+    Inputs:
+    dists -         dict of dicts; dists[p1][p2] is shortest path from p1-p2,
+                    or global NaN if not connected.
+    door_connects - dict; door_connects[door] is set of neighbors of door
+
+    Creates:
+    c_dict -        dict; c_dict[n] = set of points in component n (unique int)
+    c_graph -       dict of dicts; c_dict[n][door] = component ids accessed
+                    from n by door
+    """
+
+    door_connects = deepcopy(orig_door_connects)
+    comp_list = get_components(set(dists.keys()), dists)
     c_dict = {i: comp_list[i] for i in range(len(comp_list))}
+
     c_graph = {i: {} for i in c_dict}
-    # iterate over doors and see which join which
+    # Iterate over doors and see which join which components
     for door, connected_ps in door_connects.items():
         p1 = connected_ps.pop()
         c1 = comp_list.index(component_from_p(p1, comp_list))
         p2 = connected_ps.pop()
         c2 = comp_list.index(component_from_p(p2, comp_list))
+        # All doors connect two points only
         assert not connected_ps
         c_graph[c1][door] = c2
         c_graph[c2][door] = c1
     return c_dict, c_graph
 
 
-def open_door(graph, distances, p, connects, components):
-    distances[p] = {p2: NaN for p2 in graph}
-    graph[p] = {}
-    for p2 in graph:
-        distances[p2][p] = NaN
-    # add paths through the door to graph
-    for n in connects:
-        graph[p][n] = 1
-        distances[p][n] = 1
-        graph[n][p] = 1
-        distances[n][p] = 1
-        for n2 in connects:
-            if n != n2:
-                graph[n][n2] = 2
-                distances[n][n2] = 2
-                graph[n2][n] = 2
-                distances[n2][n] = 2
-    # extend Floyd-Warshall for new k
-    connects.add(p)
-    for k in connects:
+def open_door(distances, door_letter, orig_door_connects):
+    # Work on a copy
+    door_connects = deepcopy(orig_door_connects)
+    # all_points is set of points not connected to door
+    all_points = set(dists.keys()) - door_connects[door_letter]
+
+    p1 = door_connects[door_letter].pop()
+    p2 = door_connects[door_letter].pop()
+    assert not door_connects[door_letter]
+    distances[p1][p2] = 2
+    distances[p2][p1] = 2
+
+    # Update graph distances for new connection
+    for k in {p1, p2}:
         for i in graph:
             for j in graph:
                 d_ij = distances[i][j]
@@ -120,22 +141,39 @@ def open_door(graph, distances, p, connects, components):
                 if d_ij > d_ik + d_jk:
                     distances[i][j] = d_ik + d_jk
                     distances[j][i] = d_ik + d_jk
-    components = get_components(set(graph.keys()), distances)
 
-def edges(graph):
-    "Yields undirected edges in graph."
 
-    visited = set()
-    for u in graph:
-        visited.add(u)
-        for v in graph[u]:
-            if v not in visited:
-                yield (u, v)
+def open_all_doors(dists, door_connects):
+    for d in door_connects:
+        open_door(dists, d, door_connects)
 
-def open_all_doors(graph, dists, doors, door_connects):
-    components = get_components(set(graph.keys()), dists)
-    for d in doors:
-        open_door(graph, dists, doors[d], door_connects[d], components)
+
+def prove_no_shortcuts(dists, door_connects):
+    all_points = set(dists.keys())
+    test_dists = deepcopy(dists)
+    open_all_doors(test_dists, door_connects)
+    for c in C_DICT.values():
+        p_list = [p for p in c]
+        other_p_list = list(all_points - set(p_list))
+        for i in range(len(p_list)):
+            p1 = p_list[i]
+            for j in range(i, len(p_list)):
+                p2 = p_list[j]
+                assert dists[p1][p2] == test_dists[p1][p2], f"{p1}, {p2}"
+            for j in range(len(other_p_list)):
+                p2 = other_p_list[j]
+                assert dists[p1][p2] > test_dists[p1][p2], f"{p1}, {p2}"
+
+
+def get_keys(dists, available_keys, have_keys):
+    pass
+
+
+def gen_next_key(visited):
+    missing_keys = ALL_KEYS - visited
+    available_keys = {k for k in missing_keys if check_prereqs(k, visited)}
+    for k in available_keys:
+        yield k
 
 
 def check_prereqs(key, have_keys):
@@ -156,6 +194,9 @@ def check_prereqs(key, have_keys):
                 reachable.append(C_GRAPH[curr][out_key])
     return False
 
+
+# ----- Tests --------------
+
 def _test_prereq_func():
     assert check_prereqs("Q", {})
     assert check_prereqs("A", {"U"})
@@ -167,34 +208,10 @@ def _test_prereq_func():
     assert not check_prereqs("B", {"N", "O"})
     assert check_prereqs("C", {"S", "R", "L", "Z"})
     assert not check_prereqs("C", {"S", "R", "L"})
-    assert check_prereqs("I",{"S", "R", "L", "Z"})
-
-def prove_no_shortcuts(graph, dists, doors, door_connects):
-    all_points = set(graph.keys())
-    test_dists = deepcopy(dists)
-    open_all_doors(graph, test_dists, doors, door_connects)
-    for c in C_DICT.values():
-        p_list = [p for p in c]
-        other_p_list = list(all_points - set(p_list))
-        for i in range(len(p_list)):
-            p1 = p_list[i]
-            for j in range(i, len(p_list)):
-                p2 = p_list[j]
-                assert dists[p1][p2] == test_dists[p1][p2], f"{p1}, {p2}"
-            for j in range(len(other_p_list)):
-                p2 = other_p_list[j]
-                assert dists[p1][p2] > test_dists[p1][p2], f"{p1}, {p2}"
+    assert check_prereqs("I", {"S", "R", "L", "Z"})
 
 
-def get_keys(dists, available_keys, have_keys):
-    pass
-
-def gen_extended_sets(visited):
-    missing_keys = {c in DOORS} - visited
-    available_keys = {k for k in missing_keys if check_prereqs(k, visited)}
-    for k in available_keys:
-        yield visited.add(k)
-
+# ----- Process Input ------
 array = []
 fn = get_input_file_name("d18.txt")
 with open(fn, "r") as f:
@@ -202,9 +219,8 @@ with open(fn, "r") as f:
 
 print(f"array dims are width: {len(array[0])} and height: {len(array)}")
 
-graph = {}
+graph = {}  # dict of dicts.  graph[p1][p2] = distance from p1 to p2
 keys = {}
-doors = {}
 door_connects = {}  # Edges to be added when door is opened
 for y in range(len(array)):
     for x in range(len(array[0])):
@@ -217,6 +233,7 @@ for y in range(len(array)):
                 if ((c2 := array[y + y2][x + x2]) == "."
                         or c2 in KEYS
                         or c2 == "@"):
+                    # If neighbor is passable, add a connection
                     p_edges.add(Point(x + x2, y + y2))
             if c == ".":
                 graph[p] = {p2: 1 for p2 in p_edges}
@@ -225,23 +242,26 @@ for y in range(len(array)):
                 keys[c.upper()] = p
             elif c in DOORS:
                 door_connects[c] = p_edges
-                doors[c] = p
             elif c == "@":
                 start_pos = p
                 graph[p] = {p2: 1 for p2 in p_edges}
 
-special_tiles = {p for p in doors.values()} | {p for p in keys.values()}
+# Special tiles are protected from being trimmed
+special_tiles = {p for p in keys.values()}
 special_tiles.add(start_pos)
+# Tiles adjacent to a door are special
 for s in door_connects.values():
     special_tiles |= s
 
+# Confirm all special tiles are there
+assert start_pos in special_tiles
 for key in keys.values():
     assert key in special_tiles
-for door in doors:
-    assert doors[door] in special_tiles
+for door in door_connects:
     for connect in door_connects[door]:
         assert connect in special_tiles
 
+# Trim all 1- and 2-degree tiles, if not special
 to_delete = {p for p in graph if (
     len(graph[p]) <= 2
     and p not in special_tiles)}
@@ -250,7 +270,6 @@ while to_delete:
         p_delete = to_delete.pop()
         assert len(graph[p_delete]) <= 2
         assert p_delete not in keys
-        assert p_delete not in doors
         # If p is dead-end, just delete
         if len(graph[p_delete]) == 1:
             neighb = [key for key, _ in graph[p_delete].items()][0]
@@ -269,11 +288,13 @@ while to_delete:
             graph[p_delete]])
         graph[p_neighb1][p_neighb2] = d_n1_to_n2
         graph[p_neighb2][p_neighb1] = d_n1_to_n2
+    # See what has become deletable
     to_delete = {p for p in graph if (
         len(graph[p]) <= 2
         and p not in special_tiles)}
 
-# Tests
+# Test that all special tiles are still there and that all
+# connections are 2-way.
 for p in graph:
     if p not in special_tiles:
         assert len(graph[p]) > 2, f"{p}"
@@ -282,18 +303,20 @@ for p_s in graph.values():
         assert p in graph, f"{p}"
 for p in keys.values():
     assert p in graph
-for d in doors:
+for d in door_connects:
     for p in door_connects[d]:
         assert p in graph
 
 print(f"graph shortened: {len(graph)}")
 
 dists = find_shortest_paths(graph)
-components = get_components(set(graph.keys()), dists)
 
-C_DICT, C_GRAPH = create_component_graph(graph, dists, doors, door_connects)
+# Each component is numbered. C_DICT ties numbers to point sets.
+# C_GRAPH shows which doors link which components.
+C_DICT, C_GRAPH = create_component_graph(dists, door_connects)
 my_comp_id = component_from_p(start_pos)
 START_COMP = my_comp_id
+KEY_COMP_LOCATIONS = {key: component_from_p(keys[key]) for key in keys}
 
 # Problem is a modified travelling salesman problem. (Note that if all keys
 # are available from the start, it reduces to TSP.) Approach is to use
@@ -303,19 +326,41 @@ START_COMP = my_comp_id
 # shortcuts in the graph.  Assuming this is true, we can use the distance
 # matrix with all doors open, and test all permissible permutations of keys.
 
-prove_no_shortcuts(graph, dists, doors, door_connects)
-KEY_COMP_LOCATIONS = {key: component_from_p(keys[key]) for key in keys}
-open_all_doors(graph, dists, doors, door_connects)  # mutates distances
+try:
+    prove_no_shortcuts(dists, door_connects)
+except AssertionError:
+    raise AssertionError("Algorithm invalid if door openings create new short"
+                         "paths.")
+
+open_all_doors(dists, door_connects)  # mutates distances
 length = 0
-#_test_prereq_func()
-available_keys = {k for k, v in keys.items() if v in C_DICT[my_comp_id]}
+_test_prereq_func()
 
-for i in gen_extended_sets({}):
-    print(i)
-while length < 26:
-    for k in available_keys:
-        costs = {}
-        for prior_p in visited:
-            pass
+available_keys = {k for k, p in keys.items() if p in C_DICT[my_comp_id]}
 
+subtour_list = [    # Tours of len(n) in dict at subtour_list[n]
+    {frozenset(k):  {k: dists[start_pos][keys[k]]} for k in available_keys}]  
+# Each dict is keyed by visited_keys to another dict.  Inner dict has for cost
+# to visit those keys by last key visisted
 
+while len(subtour_list) < 26:
+    subtour_data = subtour_list[-1]
+    subtours_to_extend = frozenset(subtour_data.keys()) # set of sets
+    subtour_list.append(defaultdict(dict))
+    for subtour in subtours_to_extend:
+        cost_data = subtour_data[subtour]
+        for next_key in gen_next_key(subtour):
+            key_pos = keys[next_key]
+            shortest = NaN
+            for ending_key in cost_data:
+                total = (cost_data[ending_key]
+                         + dists[keys[ending_key]][key_pos])
+                if total < shortest:
+                    shortest = total  # Could add code to save backtrack info
+            subtour_list[-1][subtour | {next_key}][next_key] = shortest
+
+final_dict = subtour_list[-1]
+assert len(final_dict) == 1
+for key_set in final_dict:
+    assert len(key_set) == 26
+print(min(final_dict[key_set].values()))
