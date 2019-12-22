@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import enum
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,8 @@ class Point:
             raise NotImplementedError
 
     def __eq__(self, other):
+        if isinstance(other, tuple) and len(other) == 2:
+            return self.x == other[0] and self.y == other[1]
         try:
             return self.x == other.x and self.y == other.y
         except AttributeError:
@@ -52,6 +55,10 @@ class Point:
 
     def __repr__(self):
         return f"p({self.x}, {self.y})"
+    
+    def __iter__(self):
+        yield self.x
+        yield self.y
 
     def transpose(self):
         return Point(self.y, self.x)
@@ -60,7 +67,12 @@ class Point:
     def sort(p):
         return (p.x, p.y)
 
-
+class Dirs(enum.Enum):
+    N = Point(0, 1)
+    E = Point(1, 0)
+    W = Point(-1, 0)
+    S = Point(0, -1)
+    
 @dataclass
 class ThreeDVect():
     x:  int
@@ -124,7 +136,7 @@ class ThreeDVect():
 class Segment:
     p1: Point
     p2: Point
-    direction: str
+    direction: Dirs
 
     @property
     def x_min(self):
@@ -153,3 +165,5 @@ class Segment:
             return self.p1.y
         else:
             return self.p2.y
+
+
