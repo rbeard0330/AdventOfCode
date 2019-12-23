@@ -293,5 +293,4 @@ def parse_input(file_name):
     with open(get_input_file_name(file_name), "r") as f:
         for line in f.readlines():
             s_tape += line.split(",")
-    print(f"tape is {len(s_tape)} positions long.")
     return [int(s) for s in s_tape]
