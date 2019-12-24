@@ -165,6 +165,11 @@ def prove_no_shortcuts(dists, door_connects):
                 assert dists[p1][p2] > test_dists[p1][p2], f"{p1}, {p2}"
 
 
+def create_new_pos_tuple(prior, quad_to_change, new_key):
+    li = list(prior)
+    li[quad_to_change] = new_key
+    return tuple(li)
+
 def gen_next_key(visited):
     missing_keys = ALL_KEYS - visited
     available_keys = {k for k in missing_keys if check_prereqs(k, visited)}
@@ -173,10 +178,9 @@ def gen_next_key(visited):
 
 
 def check_prereqs(key, have_keys):
-    target = KEY_COMP_LOCATIONS[key]
+    target = P_TO_C_DICT[keys[key]]
     visited = set()
-    reachable = deque()
-    reachable.append(START_COMP)
+    reachable = deque((P_TO_C_DICT[p] for p in START_POS))
     while reachable:
         curr = reachable.popleft()
         if curr in visited:
@@ -194,22 +198,12 @@ def check_prereqs(key, have_keys):
 # ----- Tests --------------
 
 def _test_prereq_func():
-    assert check_prereqs("Q", {})
-    assert check_prereqs("A", {"U"})
-    assert not check_prereqs("A", {})
-    assert check_prereqs("B", {
-        "N", "O", "K", "D", "G", "H", "F", "C", "V", "P", "I"})
-    assert not check_prereqs("B", {
-        "N", "O", "K", "D", "G", "H", "F", "C", "V", "P"})
-    assert not check_prereqs("B", {"N", "O"})
-    assert check_prereqs("C", {"S", "R", "L", "Z"})
-    assert not check_prereqs("C", {"S", "R", "L"})
-    assert check_prereqs("I", {"S", "R", "L", "Z"})
+    pass # Old version not valid
 
 
 # ----- Process Input ------
 array = []
-fn = get_input_file_name("d18.txt")
+fn = get_input_file_name("d18m.txt")
 with open(fn, "r") as f:
     array = [line.strip() for line in f.readlines()]
 
@@ -218,6 +212,7 @@ print(f"array dims are width: {len(array[0])} and height: {len(array)}")
 graph = {}  # dict of dicts.  graph[p1][p2] = distance from p1 to p2
 keys = {}
 door_connects = {}  # Edges to be added when door is opened
+START_POS = []
 for y in range(len(array)):
     for x in range(len(array[0])):
         if (c := array[y][x]) == "#":
@@ -239,18 +234,19 @@ for y in range(len(array)):
             elif c in DOORS:
                 door_connects[c] = p_edges
             elif c == "@":
-                start_pos = p
+                START_POS.append(p)
                 graph[p] = {p2: 1 for p2 in p_edges}
 
 # Special tiles are protected from being trimmed
 special_tiles = {p for p in keys.values()}
-special_tiles.add(start_pos)
+special_tiles |= set(START_POS)
 # Tiles adjacent to a door are special
 for s in door_connects.values():
     special_tiles |= s
 
 # Confirm all special tiles are there
-assert start_pos in special_tiles
+for p in START_POS:
+    assert p in special_tiles
 for key in keys.values():
     assert key in special_tiles
 for door in door_connects:
@@ -310,34 +306,43 @@ dists = find_shortest_paths(graph)
 # Each component is numbered. C_DICT ties numbers to point sets.
 # C_GRAPH shows which doors link which components.
 C_DICT, C_GRAPH = create_component_graph(dists, door_connects)
-my_comp_id = component_from_p(start_pos)
-START_COMP = my_comp_id
-KEY_COMP_LOCATIONS = {key: component_from_p(keys[key]) for key in keys}
+P_TO_C_DICT = {}
+for c_id, comp in C_DICT.items():
+    for p in comp:
+        P_TO_C_DICT[p] = c_id
 
-# Problem is a modified travelling salesman problem. (Note that if all keys
-# are available from the start, it reduces to TSP.) Approach is to use
-# Held-Karp algorithm, which caches the cost to visit subsets of keys.  One
-# key concern is that the distance matrix can change as we collect keys, which
-# may create lower-cost paths.  Thus, we first prove that there are no
-# shortcuts in the graph.  Assuming this is true, we can use the distance
-# matrix with all doors open, and test all permissible permutations of keys.
+QUAD_DICT = {}
+for p in dists:
+    if p.x < 40 and p.y < 40:
+        QUAD_DICT[p] = 0
+    elif p.x > 40 and p.y < 40:
+        QUAD_DICT[p] = 1
+    elif p.x < 40 and p.y > 40:
+        QUAD_DICT[p] = 2
+    elif p.x > 40 and p.y > 40:
+        QUAD_DICT[p] = 3
 
-try:
-    prove_no_shortcuts(dists, door_connects)
-except AssertionError:
-    raise AssertionError("Algorithm invalid if door openings create new short"
-                         "paths.")
+# No shortcut result from prior run should hold.
 
 open_all_doors(dists, door_connects)  # mutates distances
 length = 0
 _test_prereq_func()
 
-available_keys = {k for k, p in keys.items() if p in C_DICT[my_comp_id]}
+available_keys = set()
+for start in START_POS:
+    for k, p in keys.items():
+        if P_TO_C_DICT[p] == P_TO_C_DICT[start]:
+            available_keys.add(k)
 
-subtour_list = [    # Tours of len(n) in dict at subtour_list[n]
-    {frozenset(k):  {k: dists[start_pos][keys[k]]} for k in available_keys}]  
+subtour_list = [{}]
 # Each dict is keyed by visited_keys to another dict.  Inner dict has for cost
-# to visit those keys by last key visisted
+# to visit those keys by tuple of current position in all 4 quads.
+
+START_TUP = tuple(START_POS)
+for k in available_keys:
+    p_tup = create_new_pos_tuple(START_TUP, QUAD_DICT[keys[k]], keys[k])
+    subtour_list[0][frozenset(k)] = {
+        p_tup: dists[START_POS[QUAD_DICT[keys[k]]]][keys[k]]}
 
 while len(subtour_list) < 26:
     subtour_data = subtour_list[-1]
@@ -347,13 +352,18 @@ while len(subtour_list) < 26:
         cost_data = subtour_data[subtour]
         for next_key in gen_next_key(subtour):
             key_pos = keys[next_key]
+            key_quad = QUAD_DICT[key_pos]
             shortest = NaN
-            for ending_key in cost_data:
-                total = (cost_data[ending_key]
-                         + dists[keys[ending_key]][key_pos])
+            for pos_tup in cost_data:
+                bot_pos = pos_tup[key_quad]
+                total = (cost_data[pos_tup]
+                         + dists[bot_pos][key_pos])
                 if total < shortest:
                     shortest = total  # Could add code to save backtrack info
-            subtour_list[-1][subtour | {next_key}][next_key] = shortest
+                    saved_tup = pos_tup
+            subtour_list[-1][subtour | {next_key}]\
+                        [create_new_pos_tuple(saved_tup, key_quad, key_pos)]\
+                        = shortest
 
 final_dict = subtour_list[-1]
 assert len(final_dict) == 1
