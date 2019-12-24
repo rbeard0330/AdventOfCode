@@ -202,6 +202,7 @@ def _test_prereq_func():
 
 
 # ----- Process Input ------
+
 array = []
 fn = get_input_file_name("d18m.txt")
 with open(fn, "r") as f:
