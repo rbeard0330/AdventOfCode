@@ -1,0 +1,37 @@
+#Start(56315705)
+
+  Syntax error!
+  C:\Code\advent_of_code\2017\rescript-project-template\src\alpine.res:6:1
+  
+  4 │     \"$event": Dom.event,
+  5 │     \"$dispatch": 
+  6 │ }
+  
+  I'm missing a type here
+
+
+  Warning number 44
+  C:\Code\advent_of_code\2017\rescript-project-template\src\d4.res:3:1-7
+  
+  1 │ @bs.module external fs: 'a = "fs"
+  2 │ 
+  3 │ open Js
+  4 │ let input: string = fs["readFileSync"]("src/data/d4.txt", {"encoding": 
+      "utf-8"})
+  5 │ let splitLines = (s) => String.split("\n", s)
+  
+  this open statement shadows the value identifier log (which is later used)
+  
+
+  Warning number 44
+  C:\Code\advent_of_code\2017\rescript-project-template\src\d5.res:3:1-7
+  
+  1 │ @bs.module external fs: 'a = "fs"
+  2 │ 
+  3 │ open Js
+  4 │ let splitLines = (s) => String.split("\n", s)
+  5 │ let parseInt = (s) => Float.fromString(s) -> Belt.Float.toInt
+  
+  this open statement shadows the value identifier log (which is later used)
+  
+#Done(56315736)

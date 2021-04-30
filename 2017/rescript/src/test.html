@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div id="div"></div>
+    <button id="button">Click me</button>
+<script>
+    const button = document.getElementById('button');
+    button.addEventListener('click', () => {
+      const elem = document.createElement('script');
+      elem.innerHTML = 'alert("Hi!");'
+      document.getElementById('div').appendChild(elem);
+    })
+</script>
+
+</body>
+</html>

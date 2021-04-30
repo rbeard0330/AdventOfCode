@@ -1,0 +1,31 @@
+rescript = 1
+rule astj
+  command = "C:\Code\advent_of_code\2017\rescript-project-template\node_modules\bs-platform\win32\bsc.exe"  -warn-error +101 -bs-v 8.4.2  -absname -bs-ast -o $out $i
+o src\d1.ast : astj ..\..\src\d1.res
+rule deps
+  command = "C:\Code\advent_of_code\2017\rescript-project-template\node_modules\bs-platform\win32\bsb_helper.exe" -hash 0813df6249a9d521226577b89e05114e $in
+  restat = 1
+o src\d1.d : deps src\d1.ast
+rule mij
+  command = "C:\Code\advent_of_code\2017\rescript-project-template\node_modules\bs-platform\win32\bsc.exe" -I "src\data\p95v303b6.win64" -I "src\data" -I src   -warn-error +101 -bs-package-name rescript-project-template -bs-package-output commonjs:$in_d:.bs.js $i
+  dyndep = 1
+  restat = 1
+o src\d1.cmj src\d1.cmi ..\..\src\d1.bs.js : mij src\d1.ast
+o src\d2.ast : astj ..\..\src\d2.res
+o src\d2.d : deps src\d2.ast
+o src\d2.cmj src\d2.cmi ..\..\src\d2.bs.js : mij src\d2.ast
+o src\d3.ast : astj ..\..\src\d3.res
+o src\d3.d : deps src\d3.ast
+o src\d3.cmj src\d3.cmi ..\..\src\d3.bs.js : mij src\d3.ast
+o src\d4.ast : astj ..\..\src\d4.res
+o src\d4.d : deps src\d4.ast
+o src\d4.cmj src\d4.cmi ..\..\src\d4.bs.js : mij src\d4.ast
+o src\d5.ast : astj ..\..\src\d5.res
+o src\d5.d : deps src\d5.ast
+o src\d5.cmj src\d5.cmi ..\..\src\d5.bs.js : mij src\d5.ast
+o src\alpine.ast : astj ..\..\src\alpine.res
+o src\alpine.d : deps src\alpine.ast
+o src\alpine.cmj src\alpine.cmi ..\..\src\alpine.bs.js : mij src\alpine.ast
+o src\component.ast : astj ..\..\src\component.res
+o src\component.d : deps src\component.ast
+o src\component.cmj src\component.cmi ..\..\src\component.bs.js : mij src\component.ast

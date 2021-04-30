@@ -1,0 +1,34 @@
+rescript = 1
+rule cp
+  command = cmd.exe /C copy /Y $i $out >NUL
+rule touch
+ command = cmd.exe /C type nul >>$out & copy $out+,, >NUL
+o d1.cmi : cp ..\bs\src\d1.cmi
+o d1.cmj : cp ..\bs\src\d1.cmj
+o d1.cmt : cp ..\bs\src\d1.cmt
+o d1.res : cp ..\..\src\d1.res
+o d2.cmi : cp ..\bs\src\d2.cmi
+o d2.cmj : cp ..\bs\src\d2.cmj
+o d2.cmt : cp ..\bs\src\d2.cmt
+o d2.res : cp ..\..\src\d2.res
+o d3.cmi : cp ..\bs\src\d3.cmi
+o d3.cmj : cp ..\bs\src\d3.cmj
+o d3.cmt : cp ..\bs\src\d3.cmt
+o d3.res : cp ..\..\src\d3.res
+o d4.cmi : cp ..\bs\src\d4.cmi
+o d4.cmj : cp ..\bs\src\d4.cmj
+o d4.cmt : cp ..\bs\src\d4.cmt
+o d4.res : cp ..\..\src\d4.res
+o d5.cmi : cp ..\bs\src\d5.cmi
+o d5.cmj : cp ..\bs\src\d5.cmj
+o d5.cmt : cp ..\bs\src\d5.cmt
+o d5.res : cp ..\..\src\d5.res
+o alpine.cmi : cp ..\bs\src\alpine.cmi
+o alpine.cmj : cp ..\bs\src\alpine.cmj
+o alpine.cmt : cp ..\bs\src\alpine.cmt
+o alpine.res : cp ..\..\src\alpine.res
+o component.cmi : cp ..\bs\src\component.cmi
+o component.cmj : cp ..\bs\src\component.cmj
+o component.cmt : cp ..\bs\src\component.cmt
+o component.res : cp ..\..\src\component.res
+build install.stamp : touch d1.cmi d1.cmj d2.cmi d2.cmj d3.cmi d3.cmj d4.cmi d4.cmj d5.cmi d5.cmj alpine.cmi alpine.cmj component.cmi component.cmj 
