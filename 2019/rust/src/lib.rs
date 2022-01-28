@@ -113,6 +113,8 @@ impl Intcoder {
     }
 
     fn tick(&mut self) -> Option<Interrupt> {
+        dbg!(self.position, self.read_offset(0));
+        println!("{:?}", &self.tape[..30]);
         match self.read_offset(0) {
             99 => {
                 Some(Interrupt::Halt(self.read_absolute(0)))
